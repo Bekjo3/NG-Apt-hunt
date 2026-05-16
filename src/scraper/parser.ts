@@ -36,7 +36,7 @@ export async function parseSingleListing(
     }
 
     let address = await article.getAttribute("data-streetaddress");
-    if (!address) {
+    if (!address) { // if data-streetaddress attribute is missing, try to extract from the .property-address div
       address = await article.evaluate((el) => {
         const addressDiv = el.querySelector(".property-address");
         return addressDiv?.textContent?.trim() || null;
