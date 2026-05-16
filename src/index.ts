@@ -19,7 +19,21 @@ async function main(): Promise<void> {
     const listings = await scrapeMultiplePages(page, pageUrls, 2000);
     console.log(`total listings found: ${listings.length}`);
 
-   
+    if (listings.length > 0) {
+      console.log("\n first 3 listings:");
+      listings.slice(0, 3).forEach((listing, idx) => {
+        console.log(`\n   [${idx + 1}] ${listing.address}`);
+        console.log(`       price: ${listing.price}`);
+        console.log(`       beds/baths: ${listing.bedrooms}bd/${listing.bathrooms}ba`);
+        console.log(`       URL: ${listing.url}`);
+      });
+    }
+
+    console.log("\n MSFT Shuttle Stops:");
+    MICROSOFT_SHUTTLE_STOPS.forEach((stop, idx) => {
+      console.log(`   [${idx + 1}] ${stop.address}`);
+      console.log(`   Coords: ${stop.latitude}, ${stop.longitude}`);
+    });
 
     console.log(
       "\n Done with scraping!!!\n"
