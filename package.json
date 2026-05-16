@@ -1,0 +1,31 @@
+{
+  "name": "ng-apt-hunt",
+  "version": "1.0.0",
+  "description": "Project I’m working on to filter apartments in Seattle based on proximity to Microsoft shuttle stops, along with a few other constraints like price, commute, # of bedrooms etc.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Bekjo3/NG-Apt-hunt.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Bekjo3/NG-Apt-hunt/issues"
+  },
+  "homepage": "https://github.com/Bekjo3/NG-Apt-hunt#readme",
+  "devDependencies": {
+    "@types/node": "^25.8.0",
+    "typescript": "^6.0.3"
+  },
+  "dependencies": {
+    "axios": "^1.16.1",
+    "csv-writer": "^1.6.0",
+    "dotenv": "^17.4.2",
+    "playwright": "^1.60.0"
+  }
+}
