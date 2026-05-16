@@ -4,6 +4,9 @@
   "description": "Project I’m working on to filter apartments in Seattle based on proximity to Microsoft shuttle stops, along with a few other constraints like price, commute, # of bedrooms etc.",
   "main": "index.js",
   "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
