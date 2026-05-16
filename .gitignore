@@ -2,3 +2,4 @@
 node_modules/
 dist/
 output.csv
+apt_listing.txt
