@@ -15,7 +15,8 @@ async function main(): Promise<void> {
   try {
     browser = await browserManager.launch();
     const page = await browserManager.createPage();
-    const pageUrls = generatePageUrls(1, 1); 
+    // 1 page is enough for testing but will add more later
+    const pageUrls = generatePageUrls(1, 1);
     const listings = await scrapeMultiplePages(page, pageUrls, 2000);
     console.log(`total listings found: ${listings.length}`);
 

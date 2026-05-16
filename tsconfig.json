@@ -11,7 +11,7 @@
     "target": "ES2022",
     "types": ["node"],
     // For nodejs:
-    "lib": ["ES2022"],
+    "lib": ["ES2022", "DOM"],
     "moduleResolution": "NodeNext",
 
     // Other Outputs
@@ -39,5 +39,14 @@
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
     "skipLibCheck": true,
+  },
+  "ts-node": {
+    "esm": true,
+    "experimentalEsm": true,
+    "moduleResolution": "NodeNext",
+    "compilerOptions": {
+      "module": "NodeNext",
+      "target": "ES2022"
+    }
   }
 }

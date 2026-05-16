@@ -23,21 +23,26 @@ export async function parseSingleListing(
 ): Promise<ApartmentListing | null> {
   try {
     // extract URL from data-url attribute on the article element
-    const article = await listingElement.$("article");
+    let article: ElementHandle | null = await listingElement.$("article");
     if (!article) {
-      console.warn("no article element found in listing, skipping");
-      return null;
+      const isArticle = await listingElement.evaluate((el: any) => el.tagName === "ARTICLE");
+      if (isArticle) {
+        article = listingElement;
+      } else {
+        console.warn("no article element found in listing, skipping");
+        return null;
+      }
     }
 
-    const url = await article.getAttribute("data-url");
+    const url = await article!.getAttribute("data-url");
     if (!url) {
       console.warn("no data-url attribute found in listing, skipping");
       return null;
     }
 
-    let address = await article.getAttribute("data-streetaddress");
+    let address = await article!.getAttribute("data-streetaddress");
     if (!address) { // if data-streetaddress attribute is missing, try to extract from the .property-address div
-      address = await article.evaluate((el) => {
+      address = await article!.evaluate((el: any) => {
         const addressDiv = el.querySelector(".property-address");
         return addressDiv?.textContent?.trim() || null;
       });
@@ -48,7 +53,7 @@ export async function parseSingleListing(
       return null;
     }
 
-    const priceText = await article.evaluate((el) => {
+    const priceText = await article!.evaluate((el: any) => {
       const priceSpan = el.querySelector(".priceTextBox span");
       return priceSpan?.textContent?.trim() || null;
     });
@@ -58,25 +63,25 @@ export async function parseSingleListing(
       return null;
     }
 
-    const bedTextBox = await article.evaluate((el) => {
+    const bedTextBox = await article!.evaluate((el: any) => {
       const bedBox = el.querySelector(".bedTextBox");
       return bedBox?.textContent?.trim() || null;
     });
 
     let bedrooms = 0;
     if (bedTextBox) {
-      const bedMatch = bedTextBox.match(/(\d+)\s*(?:bed)/i);
-      bedrooms = bedMatch ? parseInt(bedMatch[1], 10) : 0;
+      const bedMatch = bedTextBox.match(/(\d+)\s*(?:bed|bd)/i);
+      bedrooms = bedMatch && bedMatch[1] ? parseInt(bedMatch[1], 10) : 0;
     }
 
     // trying to extract bathroom but i'm not really sure
     // this might be in a separate element or in an amenities/details section... will look into it later or just manually check the list
-    const bathText = await article.evaluate((el) => {
+    const bathText = await article!.evaluate((el: any) => {
       // Look for bath info in various places
       const bathElements = el.querySelectorAll("*");
       for (const elem of Array.from(bathElements)) {
         const text = (elem as any).textContent || "";
-        if (text.match(/\d+\s*(?:bath)/i) && text.length < 50) {
+        if (text.match(/\d+\s*(?:bath|ba)/i) && text.length < 50) {
           return text.trim();
         }
       }
@@ -85,8 +90,8 @@ export async function parseSingleListing(
 
     let bathrooms = 2;
     if (bathText) {
-      const bathMatch = bathText.match(/(\d+)\s*(?:bath)/i);
-      bathrooms = bathMatch ? parseInt(bathMatch[1], 10) : 0;
+      const bathMatch = bathText.match(/(\d+(?:\.\d+)?)\s*(?:bath|ba)/i);
+      bathrooms = bathMatch ? parseFloat(bathMatch[1]) : 0;
     }
 
     // if it couldn't extract bathroom info, just setting it to 2 so we dont skip the listing

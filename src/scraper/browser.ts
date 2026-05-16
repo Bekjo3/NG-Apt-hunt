@@ -1,16 +1,17 @@
-import { chromium } from "playwright";
+import { firefox } from "playwright";
 import type { Browser, Page } from "playwright";
 
 export class BrowserManager {
   private browser: Browser | null = null;
 
   /*
-   launch a headless Chromium browser instance.
+   launch a headless Firefox browser instance.
    */
   async launch(): Promise<Browser> {
     try {
-      this.browser = await chromium.launch({
+      this.browser = await firefox.launch({
         headless: true,
+        args: [],
       });
       console.log(" yay browser launched successfully");
       return this.browser;
@@ -27,9 +28,20 @@ export class BrowserManager {
     if (!this.browser) {
       throw new Error("browser not launched!!! go and call launch() rq.");
     }
-    const page = await this.browser.newPage();
+    const page = await this.browser.newPage({
+      userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      viewport: { width: 1920, height: 1080 },
+    });
     page.setDefaultTimeout(30000); // 30 seconds is kinda a lot but lets see
     page.setDefaultNavigationTimeout(30000);
+    
+    // Add stealth headers
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "webdriver", {
+        get: () => false,
+      });
+    });
+    
     return page;
   }
 
