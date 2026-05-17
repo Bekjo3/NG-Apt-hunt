@@ -138,3 +138,25 @@ export function findNearestShuttle(batchResults: BatchRouteResult[]): NearestShu
     fullAddress: nearest.shuttleStopAddress,
   };
 }
+
+export function formatShuttleComment(result: NearestShuttleResult): string {
+  if (!result.found) {
+    const errorReason = result.errorMessage?.includes("No valid routes")
+      ? "API error"
+      : result.errorMessage?.includes("failed")
+        ? "Query failed"
+        : "Unknown error";
+    return `Unable to calculate transit time to shuttle stops (${errorReason})`;
+  }
+
+  if (result.durationMinutes === undefined) {
+    return `Unable to calculate transit time to shuttle stops (No duration data)`;
+  }
+
+  const formattedDuration =
+    result.durationMinutes === Math.floor(result.durationMinutes)
+      ? Math.floor(result.durationMinutes)
+      : result.durationMinutes;
+
+  return `Takes ${formattedDuration} mins to the nearest Microsoft shuttle stop at ${result.stopName}`;
+}
