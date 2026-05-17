@@ -1,9 +1,19 @@
 export interface ApartmentListing {
+  name: string;
   url: string;
-  price: string; // "$1,500"
-  bedrooms: number;
-  bathrooms: number;
-  address: string;
-  nearestShuttleComment: string | null; 
+  phone: string;
+  street_address: string;
+  city: string;
+  state: string;
+  postal_code: string;
+  country: string;
+  latitude: number;
+  longitude: number;
+  currency: string;
+  low_price: number | null;
+  high_price: number | null;
+  amenities: string;
+  image_url: string;
+  nearestShuttleComment: string | null;
   nearestTransitComment: string | null;
 }
