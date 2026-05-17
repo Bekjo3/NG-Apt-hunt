@@ -15,3 +15,7 @@ src/apt_lists/page7_files
 src/apt_lists/page8_files
 src/apt_lists/page9_files
 src/apt_lists/page10_files
+
+
+src/test-playwright.ts
+src/test-routes-api.ts
