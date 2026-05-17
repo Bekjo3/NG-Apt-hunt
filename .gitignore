@@ -3,3 +3,15 @@ node_modules/
 dist/
 output.csv
 apt_listing.txt
+.DS_Store
+
+src/apt_lists/page1_files
+src/apt_lists/page2_files
+src/apt_lists/page3_files
+src/apt_lists/page4_files
+src/apt_lists/page5_files
+src/apt_lists/page6_files
+src/apt_lists/page7_files
+src/apt_lists/page8_files
+src/apt_lists/page9_files
+src/apt_lists/page10_files
