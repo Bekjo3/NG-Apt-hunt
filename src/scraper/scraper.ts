@@ -35,7 +35,7 @@ export async function scrapePageListings(
       if (listing) {
         listings.push(listing);
         console.log(
-          `  [${listings.length}] ${listing.address.substring(0, 50)}... - ${listing.price}`
+          `  [${listings.length}] ${listing.street_address.substring(0, 50)}... - ${listing.low_price}`
         );
       }
 

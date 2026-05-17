@@ -105,11 +105,21 @@ export async function parseSingleListing(
 
 
     const listing: ApartmentListing = {
+      name: "Unknown",
       url,
-      price: priceText,
-      bedrooms,
-      bathrooms,
-      address,
+      phone: "",
+      street_address: address,
+      city: "",
+      state: "",
+      postal_code: "",
+      country: "US",
+      latitude: 0,
+      longitude: 0,
+      currency: "USD",
+      low_price: null,
+      high_price: null,
+      amenities: "",
+      image_url: "",
       nearestShuttleComment: null,
       nearestTransitComment: null,
     };
