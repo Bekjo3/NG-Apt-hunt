@@ -1,11 +1,7 @@
-/**
- * Main entry point for the Apartment Scraper ETL Pipeline
- * Demonstrates how to use all the modules together
- */
-
-import { browserManager } from "./scraper/browser.js";
-import { generatePageUrls } from "./scraper/pagination.js";
-import { scrapeMultiplePages } from "./scraper/scraper.js";
+import fs from "fs";
+import path from "path";
+import { chromium } from "playwright";
+import { scrapePageListings } from "./scraper/scraper.js";
 import { MICROSOFT_SHUTTLE_STOPS } from "./utils/shuttleData.js";
 
 async function main(): Promise<void> {
@@ -13,40 +9,59 @@ async function main(): Promise<void> {
 
   let browser;
   try {
-    browser = await browserManager.launch();
-    const page = await browserManager.createPage();
-    // 1 page is enough for testing but will add more later
-    const pageUrls = generatePageUrls(1, 1);
-    const listings = await scrapeMultiplePages(page, pageUrls, 2000);
-    console.log(`total listings found: ${listings.length}`);
+    browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage(); // equivalent to brand new tab
 
-    if (listings.length > 0) {
-      console.log("\n first 3 listings:");
-      listings.slice(0, 3).forEach((listing, idx) => {
-        console.log(`\n   [${idx + 1}] ${listing.address}`);
-        console.log(`       price: ${listing.price}`);
-        console.log(`       beds/baths: ${listing.bedrooms}bd/${listing.bathrooms}ba`);
-        console.log(`       URL: ${listing.url}`);
+    // get list of downloaded HTML pages
+    const pagesDir = path.join(process.cwd(), "src/apt_lists");
+    const pageFiles = fs
+      .readdirSync(pagesDir)
+      .filter((f) => f.startsWith("page") && f.endsWith(".html"))
+      .sort((a, b) => { // because js sorts arrays alphabetically. and this is bad because "page10.html" would be sorted before "page2.html" (since 1 comes before 2).
+        const aNum = parseInt(a.match(/\d+/)![0]); // extracting the "10" out of the sttring and converts it to int
+        const bNum = parseInt(b.match(/\d+/)![0]); // 
+        return aNum - bNum; // if res in -ve then a is smaller else b is smaller
+        // similar to python it's O(Nlogn)
       });
+
+    console.log(`found ${pageFiles.length} downloaded pages\n`);
+
+    let totalListings = 0;
+
+    for (const pageFile of pageFiles) {
+      const filePath = path.join(pagesDir, pageFile);  // "/Users/bereketgwol/Documents/Projects/NG-Apt-hunt/src/apt_lists/page1.html"
+      const fileUrl = `file://${filePath}`; 
+
+      console.log(`Processing: ${pageFile}`);
+      
+      try {
+        await page.goto(fileUrl);
+        const listings = await scrapePageListings(page, false);
+        console.log(` found ${listings.length} listings\n`);
+        totalListings += listings.length;
+
+        if (listings.length > 0) {
+          const listing = listings[0];
+          if (listing) {
+            console.log(`  sample ${listing.address} - ${listing.price}`);
+            console.log(`           ${listing.bedrooms}bd/${listing.bathrooms}ba\n`);
+          }
+        }
+      } catch (error) {
+        console.error(`  error processing ${pageFile}: ${error}\n`);
+      }
     }
 
-    console.log("\n MSFT Shuttle Stops:");
-    MICROSOFT_SHUTTLE_STOPS.forEach((stop, idx) => {
-      console.log(`   [${idx + 1}] ${stop.address}`);
-      console.log(`   Coords: ${stop.latitude}, ${stop.longitude}`);
-    });
-
-    console.log(
-      "\n Done with scraping!!!\n"
-    );
+    console.log(`total listings found: ${totalListings}`);
+    console.log("Done with scraping!!!\n");
 
     await page.close();
   } catch (error) {
-    console.error("\n error during scraping:", error);
+    console.error("\nerror during scraping:", error);
     process.exit(1);
   } finally {
     if (browser) {
-      await browserManager.close();
+      await browser.close();
     }
   }
 }

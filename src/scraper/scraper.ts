@@ -22,7 +22,7 @@ export async function scrapePageListings(
       timeout: 10000,
     });
 
-    const listingElements = await page.$$("li.mortar-wrapper");
+    const listingElements = await page.$$("li.mortar-wrapper"); // equivalent of document.querySelectorAll(): it finds all matching elements
     console.log(`found ${listingElements.length} listing elements on page`);
 
 
