@@ -20,3 +20,6 @@ src/apt_lists/page10_files
 src/test-playwright.ts
 src/test-routes-api.ts
 src/test-batch-routes.ts
+
+
+stats.py
