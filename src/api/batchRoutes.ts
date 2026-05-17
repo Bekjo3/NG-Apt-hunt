@@ -10,6 +10,16 @@ export interface BatchRouteResult {
   errorMessage?: string;
 }
 
+export interface NearestShuttleResult {
+  found: boolean;
+  stopName?: string;
+  durationMinutes?: number;
+  durationSeconds?: number;
+  distance?: number;
+  fullAddress?: string;
+  errorMessage?: string;
+}
+
 export async function batchQueryShuttleStops(
   apartmentLat: number,
   apartmentLng: number,
@@ -89,4 +99,42 @@ export async function batchQueryShuttleStops(
     } successful\n`
   );
   return results;
+}
+
+function extractShuttleStopName(fullAddress: string): string {
+  const parts = fullAddress.split(",");
+  return parts[0]?.trim() || fullAddress;
+}
+
+
+export function findNearestShuttle(batchResults: BatchRouteResult[]): NearestShuttleResult {
+  const validResults = batchResults.filter((result) => result.isValid);
+
+  if (validResults.length === 0) {
+    const failedCount = batchResults.filter((r) => !r.isValid).length;
+    return {
+      found: false,
+      errorMessage: `No valid routes found. All ${batchResults.length} queries failed.${
+        failedCount > 0
+          ? ` First error: ${batchResults.find((r) => r.errorMessage)?.errorMessage}`
+          : ""
+      }`,
+    };
+  }
+
+  const nearest = validResults.reduce((closest, current) => {
+    return current.duration < closest.duration ? current : closest;
+  });
+
+  const stopName = extractShuttleStopName(nearest.shuttleStopAddress);
+  const durationMinutes = Math.round((nearest.duration / 60) * 10) / 10; // round to 1 decimal place
+
+  return {
+    found: true,
+    stopName,
+    durationMinutes,
+    durationSeconds: nearest.duration,
+    distance: nearest.distance,
+    fullAddress: nearest.shuttleStopAddress,
+  };
 }
