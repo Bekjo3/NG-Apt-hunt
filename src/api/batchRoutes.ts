@@ -39,9 +39,7 @@ export async function batchQueryShuttleStops(
     const shuttle = shuttleStops[i];
 
     if (!shuttle) {
-      console.warn(
-        `[${i + 1}/${shuttleStops.length}] Shuttle stop not found, skipping...`
-      );
+      console.warn(`[${i + 1}/${shuttleStops.length}] Shuttle stop not found, skipping...`);
       continue;
     }
 
@@ -74,6 +72,7 @@ export async function batchQueryShuttleStops(
         }`
       );
 
+      // delay before next API call (except on last call)
       if (i < shuttleStops.length - 1) {
         await new Promise((resolve) => setTimeout(resolve, delayMs));
       }
@@ -107,9 +106,8 @@ function extractShuttleStopName(fullAddress: string): string {
   return parts[0]?.trim() || fullAddress;
 }
 
-export function findNearestShuttle(
-  batchResults: BatchRouteResult[]
-): NearestShuttleResult {
+
+export function findNearestShuttle(batchResults: BatchRouteResult[]): NearestShuttleResult {
   const validResults = batchResults.filter((result) => result.isValid);
 
   if (validResults.length === 0) {
@@ -129,7 +127,7 @@ export function findNearestShuttle(
   });
 
   const stopName = extractShuttleStopName(nearest.shuttleStopAddress);
-  const durationMinutes = Math.round((nearest.duration / 60) * 10) / 10;
+  const durationMinutes = Math.round((nearest.duration / 60) * 10) / 10; // round to 1 decimal place
 
   return {
     found: true,

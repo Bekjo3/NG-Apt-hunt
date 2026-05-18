@@ -37,8 +37,7 @@ export async function queryRoutesApi(
   destinationAddress: string,
   apiKey: string
 ): Promise<ParsedRouteResult> {
-  const ROUTES_API_URL =
-    "https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix";
+  const ROUTES_API_URL = "https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix";
 
   const requestPayload: ComputeRouteMatrixRequest = {
     origins: [{ waypoint: { address: originAddress } }],
@@ -54,8 +53,7 @@ export async function queryRoutesApi(
         headers: {
           "Content-Type": "application/json",
           "X-Goog-Api-Key": apiKey,
-          "X-Goog-FieldMask":
-            "duration,distanceMeters,originIndex,destinationIndex,status",
+          "X-Goog-FieldMask": "duration,distanceMeters,originIndex,destinationIndex,status",
         },
         timeout: 10000,
       }
@@ -85,6 +83,7 @@ export async function queryRoutesApi(
       };
     }
 
+    // google returns duration as a string like "120s". so i am stripping the 's' and converting to int
     const durationString = routeElement.duration || "0s";
     const durationSeconds = parseInt(durationString.replace("s", ""), 10);
     const distanceMeters = routeElement.distanceMeters || 0;
