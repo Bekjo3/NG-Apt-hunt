@@ -4,4 +4,4 @@ Project I’m working on to filter apartments in Seattle based on proximity to M
 
 Main idea is to make apartment hunting less annoying by narrowing things down to places that are actually realistic for day-to-day commute.
 
-Still in progress.
+Still in progress (it is functionally complete and will update this later!!!).
