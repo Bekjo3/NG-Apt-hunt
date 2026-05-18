@@ -1,8 +1,13 @@
 import fs from "fs";
 import path from "path";
-import { batchQueryShuttleStops, findNearestShuttle, formatShuttleComment } from "./api/batchRoutes.js";
+import {
+  batchQueryShuttleStops,
+  findNearestShuttle,
+  formatShuttleComment,
+} from "./api/batchRoutes.js";
 import { MICROSOFT_SHUTTLE_STOPS } from "./utils/shuttleData.js";
 import { exportEnrichedData } from "./utils/csvExport.js";
+import { formatFullAddress, parseOptionalCoord } from "./utils/address.js";
 import type { ApartmentListing } from "./types/index.js";
 import dotenv from "dotenv";
 
@@ -21,13 +26,44 @@ interface RawApartmentData {
   state: string;
   postal_code: string;
   country: string;
-  latitude: number;
-  longitude: number;
+  latitude: number | string;
+  longitude: number | string;
   currency: string;
-  low_price: number | null;
-  high_price: number | null;
+  low_price: number | string | null;
+  high_price: number | string | null;
   amenities: string;
   image_url: string;
+}
+
+function toListing(
+  apt: RawApartmentData,
+  shuttleComment: string
+): ApartmentListing {
+  return {
+    name: apt.name,
+    url: apt.url,
+    phone: apt.phone,
+    street_address: apt.street_address,
+    city: apt.city,
+    state: apt.state,
+    postal_code: apt.postal_code,
+    country: apt.country,
+    latitude: parseOptionalCoord(apt.latitude),
+    longitude: parseOptionalCoord(apt.longitude),
+    currency: apt.currency,
+    low_price:
+      apt.low_price === "" || apt.low_price === null
+        ? null
+        : Number(apt.low_price),
+    high_price:
+      apt.high_price === "" || apt.high_price === null
+        ? null
+        : Number(apt.high_price),
+    amenities: apt.amenities,
+    image_url: apt.image_url,
+    nearestShuttleComment: shuttleComment,
+    nearestTransitComment: null,
+  };
 }
 
 async function processApartmentsWithShuttle(): Promise<ApartmentListing[]> {
@@ -38,13 +74,19 @@ async function processApartmentsWithShuttle(): Promise<ApartmentListing[]> {
 
   console.log("loading extracted apartment data...\n");
 
-  const apartmentsJsonPath = path.join(process.cwd(), "extracted_data/apartments.json");
-  const rawData: RawApartmentData[] = JSON.parse(fs.readFileSync(apartmentsJsonPath, "utf-8"));
+  const apartmentsJsonPath = path.join(
+    process.cwd(),
+    "extracted_data/apartments.json"
+  );
+  const rawData: RawApartmentData[] = JSON.parse(
+    fs.readFileSync(apartmentsJsonPath, "utf-8")
+  );
 
   console.log(`Loaded ${rawData.length} apartments from extracted data`);
+  console.log("Using text addresses for Routes API (no geocoding step)\n");
 
   const enrichedListings: ApartmentListing[] = [];
-  const apiDelayMs = 600; 
+  const apiDelayMs = 600;
 
   for (let i = 0; i < rawData.length; i++) {
     const apt = rawData[i];
@@ -54,16 +96,14 @@ async function processApartmentsWithShuttle(): Promise<ApartmentListing[]> {
       continue;
     }
 
-    const address = `${apt.street_address}, ${apt.city}, ${apt.state}`;
+    const address = formatFullAddress(apt);
 
     console.log(`[${i + 1}/${rawData.length}] Processing: ${apt.name}`);
-    console.log(`  add: ${address}`);
-    console.log(`  coords: (${apt.latitude.toFixed(4)}, ${apt.longitude.toFixed(4)})`);
+    console.log(`  address: ${address}`);
 
     try {
       const batchResults = await batchQueryShuttleStops(
-        apt.latitude,
-        apt.longitude,
+        address,
         MICROSOFT_SHUTTLE_STOPS,
         apiKey,
         apiDelayMs
@@ -74,51 +114,16 @@ async function processApartmentsWithShuttle(): Promise<ApartmentListing[]> {
 
       console.log(`  Result: ${shuttleComment}\n`);
 
-      const enrichedListing: ApartmentListing = {
-        name: apt.name,
-        url: apt.url,
-        phone: apt.phone,
-        street_address: apt.street_address,
-        city: apt.city,
-        state: apt.state,
-        postal_code: apt.postal_code,
-        country: apt.country,
-        latitude: apt.latitude,
-        longitude: apt.longitude,
-        currency: apt.currency,
-        low_price: apt.low_price,
-        high_price: apt.high_price,
-        amenities: apt.amenities,
-        image_url: apt.image_url,
-        nearestShuttleComment: shuttleComment,
-        nearestTransitComment: null,
-      };
-
-      enrichedListings.push(enrichedListing);
+      enrichedListings.push(toListing(apt, shuttleComment));
     } catch (error) {
       console.error(`  Error processing apartment: ${error}\n`);
 
-      const enrichedListing: ApartmentListing = {
-        name: apt.name,
-        url: apt.url,
-        phone: apt.phone,
-        street_address: apt.street_address,
-        city: apt.city,
-        state: apt.state,
-        postal_code: apt.postal_code,
-        country: apt.country,
-        latitude: apt.latitude,
-        longitude: apt.longitude,
-        currency: apt.currency,
-        low_price: apt.low_price,
-        high_price: apt.high_price,
-        amenities: apt.amenities,
-        image_url: apt.image_url,
-        nearestShuttleComment: `Unable to calculate transit time to shuttle stops (Unexpected error)`,
-        nearestTransitComment: null,
-      };
-
-      enrichedListings.push(enrichedListing);
+      enrichedListings.push(
+        toListing(
+          apt,
+          "Unable to calculate transit time to shuttle stops (Unexpected error)"
+        )
+      );
     }
 
     if (i < rawData.length - 1) {
@@ -130,7 +135,6 @@ async function processApartmentsWithShuttle(): Promise<ApartmentListing[]> {
 }
 
 async function main(): Promise<void> {
-
   try {
     const enrichedListings = await processApartmentsWithShuttle();
 

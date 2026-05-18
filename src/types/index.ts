@@ -7,8 +7,8 @@ export interface ApartmentListing {
   state: string;
   postal_code: string;
   country: string;
-  latitude: number;
-  longitude: number;
+  latitude: number | null;
+  longitude: number | null;
   currency: string;
   low_price: number | null;
   high_price: number | null;

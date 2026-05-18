@@ -11,27 +11,15 @@ export interface RouteElement {
   distanceMeters?: number;
 }
 
+interface RouteMatrixWaypoint {
+  waypoint: {
+    address: string;
+  };
+}
+
 export interface ComputeRouteMatrixRequest {
-  origins: Array<{
-    waypoint: {
-      location: {
-        latLng: {
-          latitude: number;
-          longitude: number;
-        };
-      };
-    };
-  }>;
-  destinations: Array<{
-    waypoint: {
-      location: {
-        latLng: {
-          latitude: number;
-          longitude: number;
-        };
-      };
-    };
-  }>;
+  origins: RouteMatrixWaypoint[];
+  destinations: RouteMatrixWaypoint[];
   travelMode: "WALK" | "TRANSIT";
 }
 
@@ -45,39 +33,16 @@ export interface ParsedRouteResult {
 }
 
 export async function queryRoutesApi(
-  originLat: number,
-  originLng: number,
-  destLat: number,
-  destLng: number,
+  originAddress: string,
+  destinationAddress: string,
   apiKey: string
 ): Promise<ParsedRouteResult> {
-  const ROUTES_API_URL = "https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix";
+  const ROUTES_API_URL =
+    "https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix";
 
   const requestPayload: ComputeRouteMatrixRequest = {
-    origins: [
-      {
-        waypoint: {
-          location: {
-            latLng: {
-              latitude: originLat,
-              longitude: originLng,
-            },
-          },
-        },
-      },
-    ],
-    destinations: [
-      {
-        waypoint: {
-          location: {
-            latLng: {
-              latitude: destLat,
-              longitude: destLng,
-            },
-          },
-        },
-      },
-    ],
+    origins: [{ waypoint: { address: originAddress } }],
+    destinations: [{ waypoint: { address: destinationAddress } }],
     travelMode: "WALK",
   };
 
@@ -89,7 +54,8 @@ export async function queryRoutesApi(
         headers: {
           "Content-Type": "application/json",
           "X-Goog-Api-Key": apiKey,
-          "X-Goog-FieldMask": "duration,distanceMeters,originIndex,destinationIndex,status",
+          "X-Goog-FieldMask":
+            "duration,distanceMeters,originIndex,destinationIndex,status",
         },
         timeout: 10000,
       }
@@ -119,7 +85,6 @@ export async function queryRoutesApi(
       };
     }
 
-    // google returns duration as a string like "120s". so i am stripping the 's' and converting to int
     const durationString = routeElement.duration || "0s";
     const durationSeconds = parseInt(durationString.replace("s", ""), 10);
     const distanceMeters = routeElement.distanceMeters || 0;
@@ -139,7 +104,7 @@ export async function queryRoutesApi(
       "Unknown error querying Routes API";
 
     console.error(
-      `Routes API error for origin (${originLat}, ${originLng}) to destination (${destLat}, ${destLng}):`,
+      `Routes API error for origin "${originAddress}" to destination "${destinationAddress}":`,
       errorMessage
     );
 
