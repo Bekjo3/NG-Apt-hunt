@@ -2,10 +2,34 @@ import json
 import csv
 import os
 import re
+import requests
 from pathlib import Path
 from typing import List, Dict, Any, Optional
+from time import sleep
 
-# extracts 
+GEOCODING_API_KEY = os.getenv("MAPS_API_KEY", "")
+
+def geocode_address(address: str) -> tuple[Optional[float], Optional[float]]:
+    if not GEOCODING_API_KEY:
+        return None, None
+    
+    try:
+        url = "https://maps.googleapis.com/maps/api/geocode/json"
+        params = {
+            "address": address,
+            "key": GEOCODING_API_KEY
+        }
+        response = requests.get(url, params=params, timeout=5)
+        data = response.json()
+        
+        if data.get("results") and len(data["results"]) > 0:
+            location = data["results"][0]["geometry"]["location"]
+            return location.get("lat"), location.get("lng")
+    except Exception as e:
+        print(f"  Geocoding error for '{address}': {e}")
+    
+    return None, None
+
 def extract_json_ld_data(html_content: str) -> List[Dict[str, Any]]:
     json_ld_data = []
     
@@ -23,7 +47,76 @@ def extract_json_ld_data(html_content: str) -> List[Dict[str, Any]]:
     return json_ld_data
 
 
+def extract_apartments_from_html_elements(html_content: str) -> List[Dict[str, Any]]:
+    apartments = []
+    
+    li_pattern = r'<li class="mortar-wrapper">\s*<article[^>]*data-listingid="([^"]*)"[^>]*data-url="([^"]*)"[^>]*data-streetaddress="([^"]*)"'
+    li_matches = re.finditer(li_pattern, html_content, re.DOTALL)
+    
+    for match in li_matches:
+        listing_id, url, street_address = match.groups()
+        
+        search_start = match.end()
+        search_text = html_content[search_start:search_start+2000]  # Get next 2000 chars
+        
+        name_match = re.search(r'<div class="property-title"[^>]*title="([^"]*)"', search_text)
+        if name_match:
+            full_title = name_match.group(1)  # e.g., "110 Roy Apartments, Seattle, WA"
+            
+            name = full_title.split(',')[0].strip()
+        else:
+            name = ""
+        
+        address_match = re.search(r'<div class="property-address[^>]*title="([^"]*)"', search_text)
+        if address_match:
+            full_address = address_match.group(1)  # e.g., "110 Roy St, Seattle, WA 98109"
+            parts = full_address.split(',')
+            
+            # Parse the address components
+            if len(parts) >= 3:
+                street = parts[0].strip()
+                city = parts[1].strip()
+                state_zip = parts[2].strip().split()
+                state = state_zip[0] if state_zip else "WA"
+                postal_code = state_zip[1] if len(state_zip) > 1 else ""
+            else:
+                street = street_address
+                city = ""
+                state = "WA"
+                postal_code = ""
+        else:
+            street = street_address
+            city = ""
+            state = "WA"
+            postal_code = ""
+        
+        apartment = {
+            "name": name,
+            "url": url,
+            "phone": "",  
+            "street_address": street,
+            "city": city,
+            "state": state,
+            "postal_code": postal_code,
+            "country": "US",
+            "latitude": "",  
+            "longitude": "",  
+            "currency": "USD",
+            "low_price": "",  
+            "high_price": "", 
+            "amenities": "",  
+            "image_url": ""  
+        }
+        
+        apartments.append(apartment)
+    
+    return apartments
+
+
 def extract_apartments_from_schema(json_ld_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """DEPRECATED: This extracts from JSON-LD which has same 40 apartments on all pages.
+    so i am using the  extract_apartments_from_html_elements instead for actual page apartments."""
+    
     apartments = []
     
     for schema_obj in json_ld_data:
@@ -125,8 +218,8 @@ def process_html_file(file_path: Path) -> List[Dict[str, Any]]:
         with open(file_path, 'r', encoding='utf-8') as f:
             html_content = f.read()
         
-        json_ld_data = extract_json_ld_data(html_content)
-        apartments = extract_apartments_from_schema(json_ld_data)
+        # Extract from HTML elements (actual page apartments) instead of JSON-LD
+        apartments = extract_apartments_from_html_elements(html_content)
         
         return apartments
     except Exception as e:
@@ -160,6 +253,21 @@ def save_to_json(apartments: List[Dict[str, Any]], output_path: Path):
     print(f"Saved {len(apartments)} apartments to {output_path}")
 
 
+def deduplicate_apartments(apartments: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    seen = set()
+    unique_apartments = []
+    
+    for apt in apartments:
+        # Use URL as unique key (most reliable identifier)
+        url = apt.get("url", "").strip()
+        
+        if url and url not in seen:
+            seen.add(url)
+            unique_apartments.append(apt)
+    
+    return unique_apartments
+
+
 def main():
     # paths
     input_dir = Path("/Users/bereketgwol/Documents/Projects/NG-Apt-hunt/src/apt_lists")
@@ -183,29 +291,34 @@ def main():
         all_apartments.extend(apartments)
     
     print(f"Total apartments extracted: {len(all_apartments)}")
+    
+    # deduplicate
+    print("\nDeduplicating apartments...")
+    unique_apartments = deduplicate_apartments(all_apartments)
+    print(f"Unique apartments after deduplication: {len(unique_apartments)}")
 
     csv_output = output_dir / "apartments.csv"
-    save_to_csv(all_apartments, csv_output)
+    save_to_csv(unique_apartments, csv_output)
     
     # save to JSON
     json_output = output_dir / "apartments.json"
-    save_to_json(all_apartments, json_output)
+    save_to_json(unique_apartments, json_output)
     
     # print summary statistics
-    if all_apartments:
+    if unique_apartments:
         print("\n")
-        print(f"Total apartments: {len(all_apartments)}")
+        print(f"Total apartments: {len(unique_apartments)}")
         
         # count apartments with coordinates
-        with_coords = sum(1 for apt in all_apartments if apt.get("latitude") and apt.get("longitude"))
+        with_coords = sum(1 for apt in unique_apartments if apt.get("latitude") and apt.get("longitude"))
         print(f"Apartments with coordinates: {with_coords}")
         
         # count apartments with prices
-        with_prices = sum(1 for apt in all_apartments if apt.get("low_price") or apt.get("high_price"))
+        with_prices = sum(1 for apt in unique_apartments if apt.get("low_price") or apt.get("high_price"))
         print(f"Apartments with pricing: {with_prices}")
 
         cities = set()
-        for apt in all_apartments:
+        for apt in unique_apartments:
             if apt.get("city"):
                 cities.add(apt["city"])
         print(f"Cities: {', '.join(sorted(cities))}")
