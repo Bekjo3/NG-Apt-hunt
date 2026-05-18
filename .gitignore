@@ -20,6 +20,9 @@ src/apt_lists/page10_files
 src/test-playwright.ts
 src/test-routes-api.ts
 src/test-batch-routes.ts
-
+test_geocoding.py
+test-apartments-small.json
+test-pipeline.sh
+test-small.ts
 
 stats.py
